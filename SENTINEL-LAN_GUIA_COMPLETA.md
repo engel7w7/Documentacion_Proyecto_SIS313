@@ -731,12 +731,15 @@ ls -lh /var/backups/nextcloud_full/
 ## Información del Proyecto
 
 **Curso**: SIS313 - Infraestructura Plataformas Tecnológicas y Redes
+
 **Proyecto**: Sentinel-LAN  
+
 **Versión**: 1.0
+
 **Fecha**: Noviembre 2025
+---
 **Intregrantes**:
     - Romero Morales Jhojan Erick CICO
     - Galván Porcel Joel CICO
     - Mamani Calizaya Jose Mario CICO
     - Campos Alfaro Dilan Domingo SIS
----
