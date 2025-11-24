@@ -1,11 +1,9 @@
-# 🏰 Proyecto: Sentinel-LAN - Guía Maestra Definitiva v3.0
+# Proyecto Sentinel-LAN - Guía Completa
 
-> **Arquitectura de Alta Disponibilidad con Nextcloud**  
-> Sistema distribuido en 4 VMs con acceso seguro vía Jump Server
+**Arquitectura de Alta Disponibilidad con Nextcloud**  
+Sistema distribuido en 4 VMs con acceso seguro vía Jump Server
 
----
-
-## 📋 Tabla de Direcciones IP
+## Tabla de Direcciones IP
 
 | VM   | Hostname | IP Gestión (ens18)   | IP Proyecto (vlan101) | Rol                    |
 |------|----------|----------------------|-----------------------|------------------------|
@@ -14,30 +12,29 @@
 | VM 3 | db       | 192.168.100.178      | 192.168.101.5         | MariaDB                |
 | VM 4 | infra    | 192.168.100.209      | 192.168.101.3         | NFS / DNS / Backups    |
 
----
 
-## 🎯 Características de la Arquitectura
+## Características de la Arquitectura
 
-- **Arquitectura**: 4 VMs + Salto SSH (Jump Server)
-- **Red**: Puerto 81 interno (evasión de bloqueos) y puerto 443 externo
-- **Software**: PHP 8.3, Nginx, MariaDB
-- **Fixes**: Corrección de túneles, permisos NFS, límites de subida (1GB) y config.php para proxy inverso
+- 4 VMs + Salto SSH (Jump Server)
+- Puerto 81 interno (evasión de bloqueos) y puerto 443 externo
+- Stack: PHP 8.3, Nginx, MariaDB
+- Incluye correcciones de túneles, permisos NFS, límites de subida (1GB) y configuración de proxy inverso
 
----
 
-## 🟢 Fase 1: Configuración de Red y Sistema Base
 
-### 1.1. Configurar Netplan (En las 4 VMs)
+## Fase 1: Configuración de Red y Sistema Base
 
-Edita el archivo de configuración de red en cada VM:
+### 1.1 Configurar Netplan (En las 4 VMs)
+
+Edita `/etc/netplan/50-cloud-init.yaml` en cada VM:
 
 ```bash
 sudo nano /etc/netplan/50-cloud-init.yaml
 ```
 
-Esto garantiza acceso a internet (vía `ens18`) y comunicación interna (vía `vlan101`).
+Configuración de red dual: `ens18` para internet y `vlan101` para comunicación interna.
 
-#### Plantilla de configuración:
+**Configuración:**
 
 ```yaml
 network:
@@ -59,25 +56,21 @@ network:
       addresses: ["192.168.101.X/29"] # <--- ¡CAMBIA ESTO POR LA IP DE PROYECTO!
 ```
 
-#### Aplicar la configuración:
+Aplicar cambios:
 
 ```bash
 sudo netplan apply
 ```
 
----
+### 1.2 Instalación de Paquetes
 
-### 1.2. Instalación de Paquetes (En cada VM)
-
-#### 📦 VM proxy (192.168.100.214):
+**VM proxy** (192.168.100.214):
 
 ```bash
 sudo apt update && sudo apt install -y nginx prometheus-node-exporter
 ```
 
----
-
-#### 📦 VM app (192.168.100.196) - ¡OJO! PHP 8.3:
+**VM app** (192.168.100.196) - Importante: PHP 8.3:
 
 ```bash
 sudo add-apt-repository universe
@@ -87,31 +80,25 @@ sudo apt install -y nginx php8.3-fpm php8.3-mysql php8.3-xml php8.3-gd \
     php8.3-apcu unzip nfs-common prometheus-node-exporter
 ```
 
----
-
-#### 📦 VM db (192.168.100.178):
+**VM db** (192.168.100.178):
 
 ```bash
 sudo apt update && sudo apt install -y mariadb-server prometheus-node-exporter
 ```
 
----
-
-#### 📦 VM infra (192.168.100.209):
+**VM infra** (192.168.100.209):
 
 ```bash
 sudo apt update && sudo apt install -y nfs-kernel-server dnsmasq prometheus grafana
 ```
 
----
+## Fase 2: Servicios de Infraestructura (VM infra)
 
-## 🔵 Fase 2: Servicios de Infraestructura (VM infra)
+Conéctate a `192.168.100.209`
 
-> 🔌 **Conéctate a**: `192.168.100.209`
+### 2.1 Configurar NFS (Almacenamiento)
 
-### 2.1. Configurar NFS (Almacenamiento)
-
-#### Crear estructura de directorios:
+Crear estructura de directorios:
 
 ```bash
 sudo mkdir -p /srv/nextcloud/data
@@ -119,22 +106,20 @@ sudo chown -R www-data:www-data /srv/nextcloud/data
 sudo chmod 770 /srv/nextcloud/data
 ```
 
-#### Exportar a la VM APP:
+Exportar a la VM APP:
 
 ```bash
 echo "/srv/nextcloud/data 192.168.101.4(rw,sync,no_subtree_check)" | sudo tee -a /etc/exports
 ```
 
-#### Aplicar y reiniciar servicio:
+Aplicar cambios:
 
 ```bash
 sudo exportfs -a
 sudo systemctl restart nfs-kernel-server
 ```
 
----
-
-### 2.2. Configurar DNS (dnsmasq)
+### 2.2 Configurar DNS (dnsmasq)
 
 Edita el archivo de configuración:
 
@@ -142,7 +127,7 @@ Edita el archivo de configuración:
 sudo nano /etc/dnsmasq.conf
 ```
 
-#### Agregar la siguiente configuración:
+Agregar:
 
 ```conf
 listen-address=127.0.0.1,192.168.101.3
@@ -151,23 +136,21 @@ address=/nextcloud.rootcode.com.bo/192.168.101.2
 server=8.8.8.8
 ```
 
-#### Reiniciar el servicio:
+Reiniciar servicio:
 
 ```bash
 sudo systemctl restart dnsmasq
 ```
 
----
+### 2.3 Generar Certificados SSL
 
-### 2.3. Generar Certificados SSL
-
-#### Crear directorio de trabajo:
+Crear directorio de trabajo:
 
 ```bash
 mkdir -p ~/pki && cd ~/pki
 ```
 
-#### Generar Autoridad Certificadora (CA):
+Generar Autoridad Certificadora (CA):
 
 ```bash
 openssl genrsa -out ca.key 4096
@@ -175,7 +158,7 @@ openssl req -x509 -new -nodes -key ca.key -sha256 -days 3650 -out ca.crt \
     -subj "/CN=RootCode-CA"
 ```
 
-#### Generar certificado para el dominio:
+Generar certificado para el dominio:
 
 ```bash
 openssl genrsa -out cloud.key 4096
@@ -185,7 +168,7 @@ openssl x509 -req -in cloud.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
     -out cloud.crt -days 825 -sha256
 ```
 
-#### Preparar certificado para Nginx:
+Preparar para Nginx:
 
 ```bash
 sudo mkdir -p /etc/ssl/private
@@ -193,23 +176,19 @@ sudo bash -c 'cat cloud.key cloud.crt ca.crt > /etc/ssl/private/cloud.pem'
 sudo chmod 600 /etc/ssl/private/cloud.pem
 ```
 
----
+## Fase 3: Base de Datos (VM db)
 
-## 🟡 Fase 3: Base de Datos (VM db)
+Conéctate a `192.168.100.178`
 
-> 🔌 **Conéctate a**: `192.168.100.178`
-
-### 3.1. Asegurar la instalación de MariaDB
+### 3.1 Asegurar instalación de MariaDB
 
 ```bash
 sudo mysql_secure_installation
 ```
 
-Responde a las preguntas de seguridad (establecer contraseña root, remover usuarios anónimos, etc.)
+Responde a las preguntas de seguridad (contraseña root, remover usuarios anónimos, etc.)
 
----
-
-### 3.2. Configurar acceso remoto
+### 3.2 Configurar acceso remoto
 
 Edita el archivo de configuración:
 
@@ -217,7 +196,7 @@ Edita el archivo de configuración:
 sudo nano /etc/mysql/mariadb.conf.d/50-server.cnf
 ```
 
-Busca y **cambia** la línea:
+Cambiar la línea:
 
 ```ini
 bind-address = 192.168.101.5
@@ -229,9 +208,7 @@ Reinicia el servicio:
 sudo systemctl restart mariadb
 ```
 
----
-
-### 3.3. Crear base de datos y usuario
+### 3.3 Crear base de datos y usuario
 
 Accede a MariaDB:
 
@@ -253,37 +230,33 @@ FLUSH PRIVILEGES;
 EXIT;
 ```
 
----
+## Fase 4: Aplicación (VM app)
 
-## 🟠 Fase 4: Aplicación (VM app)
+Conéctate a `192.168.100.196`
 
-> 🔌 **Conéctate a**: `192.168.100.196`
+### 4.1 Montar almacenamiento NFS
 
-### 4.1. Montar almacenamiento NFS
-
-#### Crear punto de montaje:
+Crear punto de montaje:
 
 ```bash
 sudo mkdir -p /mnt/nextcloud_data
 ```
 
-#### Montar volumen NFS:
+Montar volumen NFS:
 
 ```bash
 sudo mount 192.168.101.3:/srv/nextcloud/data /mnt/nextcloud_data
 ```
 
-#### Agregar al fstab para montaje automático:
+Agregar al fstab para montaje automático:
 
 ```bash
 echo "192.168.101.3:/srv/nextcloud/data /mnt/nextcloud_data nfs defaults 0 0" | sudo tee -a /etc/fstab
 ```
 
----
+### 4.2 Descargar e instalar Nextcloud
 
-### 4.2. Descargar e instalar Nextcloud
-
-#### Descargar la última versión:
+Descargar la última versión:
 
 ```bash
 cd /tmp
@@ -291,25 +264,23 @@ wget https://download.nextcloud.com/server/releases/latest.zip
 unzip latest.zip
 ```
 
-#### Mover a la ubicación web:
+Mover a la ubicación web:
 
 ```bash
 sudo rm -rf /var/www/nextcloud
 sudo mv nextcloud /var/www/
 ```
 
-#### Asignar permisos correctos:
+Asignar permisos:
 
 ```bash
 sudo chown -R www-data:www-data /var/www/nextcloud
 sudo chown -R www-data:www-data /mnt/nextcloud_data
 ```
 
----
+### 4.3 Configuración de PHP
 
-### 4.3. Configuración de PHP (Límites y Tipos)
-
-#### Aumentar límites de PHP
+Aumentar límites de PHP:
 
 Edita el archivo de configuración:
 
@@ -317,7 +288,7 @@ Edita el archivo de configuración:
 sudo nano /etc/php/8.3/fpm/php.ini
 ```
 
-Busca y modifica las siguientes líneas:
+Modificar:
 
 ```ini
 memory_limit = 512M
@@ -325,9 +296,7 @@ upload_max_filesize = 1024M
 post_max_size = 1024M
 ```
 
----
-
-#### Corregir tipos MIME (Error JS)
+Corregir tipos MIME (para archivos .mjs):
 
 Edita el archivo de tipos MIME:
 
@@ -335,31 +304,27 @@ Edita el archivo de tipos MIME:
 sudo nano /etc/nginx/mime.types
 ```
 
-Dentro del bloque `types { }`, añade:
+Añadir dentro del bloque `types { }`:
 
 ```nginx
 application/javascript  mjs;
 ```
 
----
-
-#### Reiniciar PHP-FPM:
+Reiniciar PHP-FPM:
 
 ```bash
 sudo systemctl restart php8.3-fpm
 ```
 
----
+### 4.4 Configurar Nginx (Backend Puerto 81)
 
-### 4.4. Configurar Nginx (Backend Puerto 81)
-
-#### Crear archivo de configuración:
+Crear archivo de configuración:
 
 ```bash
 sudo nano /etc/nginx/sites-available/nextcloud
 ```
 
-#### Agregar la siguiente configuración:
+Agregar:
 
 ```nginx
 server {
@@ -390,9 +355,7 @@ server {
 }
 ```
 
----
-
-#### Activar el sitio y reiniciar Nginx:
+Activar el sitio:
 
 ```bash
 sudo ln -sf /etc/nginx/sites-available/nextcloud /etc/nginx/sites-enabled/nextcloud
@@ -401,43 +364,39 @@ sudo nginx -t  # Verificar sintaxis
 sudo systemctl restart nginx
 ```
 
----
+## Fase 5: Proxy Inverso (VM proxy)
 
-## 🟣 Fase 5: Proxy Inverso (VM proxy)
+Conéctate a `192.168.100.214`
 
-> 🔌 **Conéctate a**: `192.168.100.214`
+### 5.1 Copiar Certificado SSL
 
-### 5.1. Copiar Certificado SSL
-
-#### Crear directorio para certificados:
+Crear directorio:
 
 ```bash
 sudo mkdir -p /etc/ssl/private
 ```
 
-#### Copiar certificado desde VM infra:
+Copiar certificado desde VM infra:
 
 ```bash
 sudo scp adminsrv@192.168.100.209:/etc/ssl/private/cloud.pem /etc/ssl/private/cloud.pem
 ```
 
-#### Asignar permisos restrictivos:
+Asignar permisos:
 
 ```bash
 sudo chmod 600 /etc/ssl/private/cloud.pem
 ```
 
----
+### 5.2 Configurar Nginx (Frontend)
 
-### 5.2. Configurar Nginx (Frontend)
-
-#### Crear archivo de configuración:
+Crear archivo de configuración:
 
 ```bash
 sudo nano /etc/nginx/sites-available/cloud.lan
 ```
 
-#### Agregar la siguiente configuración:
+Agregar:
 
 ```nginx
 upstream nextcloud_backend {
@@ -468,9 +427,7 @@ server {
 }
 ```
 
----
-
-#### Activar el sitio y reiniciar Nginx:
+Activar el sitio:
 
 ```bash
 sudo ln -sf /etc/nginx/sites-available/cloud.lan /etc/nginx/sites-enabled/cloud.lan
@@ -479,13 +436,11 @@ sudo nginx -t  # Verificar sintaxis
 sudo systemctl restart nginx
 ```
 
----
+## Fase 6: Configuración de Firewalls (UFW)
 
-## 🔴 Fase 6: Firewalls (UFW) - ¡CRÍTICO!
+Configurar correctamente el firewall en cada VM para evitar errores de conexión.
 
-Ejecuta esto en cada VM para evitar el `Connection refused` o `Timed Out`.
-
-### VM proxy (100.214):
+### VM proxy (192.168.100.214)
 
 ```bash
 sudo ufw reset
@@ -497,7 +452,7 @@ sudo ufw allow 80/tcp
 sudo ufw enable
 ```
 
-### VM app (100.196):
+### VM app (192.168.100.196)
 
 ```bash
 sudo ufw reset
@@ -507,7 +462,7 @@ sudo ufw allow from 192.168.101.2 to any port 81 proto tcp # Backend 81
 sudo ufw enable
 ```
 
-### VM db (100.178):
+### VM db (192.168.100.178)
 
 ```bash
 sudo ufw reset
@@ -517,7 +472,7 @@ sudo ufw allow from 192.168.101.4 to any port 3306 proto tcp # MariaDB desde APP
 sudo ufw enable
 ```
 
-### VM infra (100.209):
+### VM infra (192.168.100.209)
 
 ```bash
 sudo ufw reset
@@ -528,11 +483,9 @@ sudo ufw allow from 192.168.101.0/29 to any port 53 proto udp # DNS interno
 sudo ufw enable
 ```
 
----
+## Fase 7: Configuración de Acceso desde el Cliente
 
-## ⚫ Fase 7: Configuración de Acceso Cliente
-
-### 7.1. Archivo hosts (PC Windows)
+### 7.1 Archivo hosts (PC Windows)
 
 Abre **PowerShell como Administrador** y ejecuta:
 
@@ -546,11 +499,9 @@ Agrega la siguiente línea al final:
 127.0.0.1    nextcloud.rootcode.com.bo
 ```
 
-Guarda y cierra el archivo.
+Guardar y cerrar.
 
----
-
-### 7.2. Túnel SSH (PowerShell)
+### 7.2 Túnel SSH (PowerShell)
 
 Abre **PowerShell** y ejecuta el siguiente comando (déjalo abierto):
 
@@ -558,21 +509,19 @@ Abre **PowerShell** y ejecuta el siguiente comando (déjalo abierto):
 ssh -J usrproxy@201.131.45.42 adminsrv@192.168.100.214 -L 8443:127.0.0.1:443 -N
 ```
 
-> 💡 **Nota**: Este túnel debe permanecer activo mientras uses Nextcloud.
+**Nota**: Este túnel debe permanecer activo mientras uses Nextcloud.
 
----
+### 7.3 Instalación Web de Nextcloud
 
-### 7.3. Instalación Web de Nextcloud
-
-#### Accede al instalador:
+Acceder al instalador:
 
 Abre tu navegador y ve a:
 
 ```
-https://nextcloud.rootcloud.com.bo:8443
+https://nextcloud.rootcode.com.bo:8443
 ```
 
-#### Completa el formulario con los siguientes datos:
+Completar el formulario:
 
 | Campo                      | Valor                        |
 |----------------------------|------------------------------|
@@ -585,11 +534,9 @@ https://nextcloud.rootcloud.com.bo:8443
 | **Nombre BD**              | `nextcloud`                  |
 | **Host BD**                | `192.168.101.5`              |
 
-Haz clic en **Finalizar configuración**.
+Hacer clic en **Finalizar configuración**.
 
----
-
-### 7.4. Ajuste Final config.php (Post-Install)
+### 7.4 Ajuste Final config.php
 
 Después de la instalación, edita la configuración en la **VM app**:
 
@@ -612,39 +559,35 @@ Agrega/modifica las siguientes líneas:
   'memcache.local' => '\OC\Memcache\APCu',
 ```
 
-#### Reinicia PHP-FPM:
+Reiniciar PHP-FPM:
 
 ```bash
 sudo systemctl restart php8.3-fpm
 ```
 
----
+## Fase 8: Backups Automatizados
 
-## 🟤 Fase 8: Backups Automatizados
+Ejecutar en VM infra como usuario `adminsrv`
 
-> 🔌 **Ejecuta en VM infra** como usuario `adminsrv`
+### 8.1 Configurar acceso SSH sin contraseña
 
-### 8.1. Configurar acceso SSH sin contraseña
-
-#### Generar par de llaves SSH:
+Generar par de llaves SSH:
 
 ```bash
 ssh-keygen -t rsa -b 4096 -C "backup@infra"
 ```
 
-Presiona `Enter` para aceptar la ubicación predeterminada y no uses passphrase.
+Presionar `Enter` para aceptar la ubicación predeterminada (sin passphrase).
 
-#### Copiar llave pública a VM db:
+Copiar llave pública a VM db:
 
 ```bash
 ssh-copy-id adminsrv@192.168.101.5
 ```
 
----
+### 8.2 Configurar credenciales de base de datos
 
-### 8.2. Configurar credenciales de base de datos
-
-#### En la VM db, crear archivo de credenciales:
+En la VM db, crear archivo de credenciales:
 
 Conéctate a la **VM db** (`192.168.100.178`) y ejecuta:
 
@@ -660,29 +603,27 @@ user=ncuser
 password=P@ssword_Segura_2025
 ```
 
-#### Asignar permisos restrictivos:
+Asignar permisos:
 
 ```bash
 chmod 600 /home/adminsrv/.my.cnf
 ```
 
----
+### 8.3 Crear script de backup
 
-### 8.3. Crear script de backup
-
-#### En la VM infra, crear el directorio de scripts:
+En la VM infra, crear directorio de scripts:
 
 ```bash
 sudo mkdir -p /opt/admin_scripts
 ```
 
-#### Crear el script de backup:
+Crear el script:
 
 ```bash
 sudo nano /opt/admin_scripts/backup_completo.sh
 ```
 
-#### Agregar el siguiente contenido:
+Contenido del script:
 
 ```bash
 #!/bin/bash
@@ -710,59 +651,53 @@ find $BACKUP_DIR -maxdepth 1 -mtime +7 -exec rm -rf {} \;
 echo "Backup completado: $BACKUP_DIR/$DATE"
 ```
 
-#### Asignar permisos de ejecución:
+Asignar permisos de ejecución:
 
 ```bash
 sudo chmod +x /opt/admin_scripts/backup_completo.sh
 ```
 
-#### Crear directorio de backups:
+Crear directorio de backups:
 
 ```bash
 sudo mkdir -p /var/backups/nextcloud_full
 ```
 
----
+### 8.4 Automatización con Cron
 
-### 8.4. Automatización con Cron
-
-#### Editar crontab del usuario root:
+Editar crontab:
 
 ```bash
 sudo crontab -e
 ```
 
-#### Agregar la siguiente línea:
+Agregar:
 
 ```cron
 0 3 * * * /opt/admin_scripts/backup_completo.sh
 ```
 
-> 💡 **Nota**: Esto ejecutará el backup todos los días a las 3:00 AM.
+Esto ejecutará el backup todos los días a las 3:00 AM.
 
-#### Verificar que el cron se agregó correctamente:
+Verificar:
 
 ```bash
 sudo crontab -l
 ```
 
----
-
-### 8.5. Probar el backup manualmente
+### 8.5 Probar el backup manualmente
 
 ```bash
 sudo /opt/admin_scripts/backup_completo.sh
 ```
 
-#### Verificar que se creó el backup:
+Verificar que se creó el backup:
 
 ```bash
 ls -lh /var/backups/nextcloud_full/
 ```
 
----
-
-## 📊 Diagrama de Arquitectura
+## Diagrama de Arquitectura
 
 ```
                     Internet
@@ -786,13 +721,11 @@ ls -lh /var/backups/nextcloud_full/
                                 └──────┘
 ```
 
----
+## Troubleshooting
 
-## 🔧 Troubleshooting Común
+### Error: "Connection refused"
 
-### ❌ Error: "Connection refused"
-
-**Diagnóstico:**
+Diagnóstico:
 
 ```bash
 # Verificar estado del firewall
@@ -803,22 +736,20 @@ sudo systemctl status nginx
 sudo systemctl status php8.3-fpm
 ```
 
-**Solución:**
+Solución:
 - Revisar reglas de UFW (ver Fase 6)
 - Verificar que los servicios estén corriendo
 - Comprobar que los puertos estén en escucha: `sudo netstat -tlnp`
 
----
+### Error: "Trusted domain"
 
-### ❌ Error: "Trusted domain"
-
-**Diagnóstico:**
+Diagnóstico:
 
 ```bash
 sudo cat /var/www/nextcloud/config/config.php | grep trusted_domains
 ```
 
-**Solución:**
+Solución:
 
 Editar el archivo:
 
@@ -828,28 +759,24 @@ sudo nano /var/www/nextcloud/config/config.php
 
 Añadir el dominio/IP en el array `trusted_domains` (ver Fase 7.4)
 
----
+### Error: "Can't write to data directory"
 
-### ❌ Error: "Can't write to data directory"
-
-**Diagnóstico:**
+Diagnóstico:
 
 ```bash
 ls -la /mnt/nextcloud_data
 ```
 
-**Solución:**
+Solución:
 
 ```bash
 sudo chown -R www-data:www-data /mnt/nextcloud_data
 sudo chmod 770 /mnt/nextcloud_data
 ```
 
----
+### NFS no monta
 
-### ❌ NFS no monta
-
-**Diagnóstico:**
+Diagnóstico:
 
 ```bash
 # En VM infra
@@ -859,7 +786,7 @@ sudo exportfs -v
 showmount -e 192.168.101.3
 ```
 
-**Solución:**
+Solución:
 
 ```bash
 # Probar montaje manual
@@ -872,27 +799,23 @@ ping 192.168.101.3
 sudo ufw status
 ```
 
----
+### Error: Archivos grandes no se suben
 
-### ❌ Error: Archivos grandes no se suben
-
-**Diagnóstico:**
+Diagnóstico:
 
 Verificar límites en `/etc/php/8.3/fpm/php.ini` y en la configuración de Nginx.
 
-**Solución:**
+Solución:
 
 Ver Fase 4.3 para ajustar `upload_max_filesize`, `post_max_size` y `client_max_body_size`.
 
----
+### Túnel SSH se desconecta
 
-### ❌ Túnel SSH se desconecta
-
-**Diagnóstico:**
+Diagnóstico:
 
 El túnel SSH puede cerrarse por inactividad.
 
-**Solución:**
+Solución:
 
 Agregar opciones al comando SSH:
 
@@ -900,9 +823,7 @@ Agregar opciones al comando SSH:
 ssh -J usrproxy@201.131.45.42 adminsrv@192.168.100.214 -L 8443:127.0.0.1:443 -N -o ServerAliveInterval=60
 ```
 
----
-
-## 📝 Checklist de Verificación
+## Checklist de Verificación
 
 - [ ] Todas las VMs tienen conectividad en ambas redes (ens18 y vlan101)
 - [ ] NFS montado correctamente en VM app
@@ -915,18 +836,14 @@ ssh -J usrproxy@201.131.45.42 adminsrv@192.168.100.214 -L 8443:127.0.0.1:443 -N 
 - [ ] Backup automatizado funciona (verificar en `/var/backups/nextcloud_full`)
 - [ ] DNS resuelve internamente (desde VMs: `dig @192.168.101.3 nextcloud.rootcode.com.bo`)
 
----
-
-## 📚 Referencias
+## Referencias
 
 - [Documentación Oficial Nextcloud](https://docs.nextcloud.com/)
 - [Nginx Reverse Proxy Guide](https://docs.nginx.com/nginx/admin-guide/web-server/reverse-proxy/)
 - [MariaDB Documentation](https://mariadb.org/documentation/)
 - [Ubuntu Server Guide](https://ubuntu.com/server/docs)
 
----
-
-## 👥 Equipo del Proyecto
+## Información del Proyecto
 
 **Curso**: SIS313 - Administración de Redes  
 **Proyecto**: Sentinel-LAN  
@@ -935,4 +852,4 @@ ssh -J usrproxy@201.131.45.42 adminsrv@192.168.100.214 -L 8443:127.0.0.1:443 -N 
 
 ---
 
-> **Nota Importante**: Esta guía consolida todas las correcciones realizadas durante la depuración del proyecto. Sigue los pasos en orden secuencial para garantizar una implementación exitosa.
+**Nota**: Esta guía consolida todas las correcciones realizadas durante la depuración del proyecto. Seguir los pasos en orden secuencial para garantizar una implementación exitosa.
