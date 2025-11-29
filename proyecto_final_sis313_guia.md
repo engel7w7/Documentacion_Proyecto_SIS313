@@ -826,7 +826,7 @@ El despliegue se divide en 8 fases secuenciales que deben ejecutarse en orden:
 
 ---
 
-### Conclusiones del Proyecto
+### Estructura resumida del proyecto
 
 ### 1. Diseñamos una Arquitectura en Capas
 En lugar de instalar todo en un solo servidor, decidimos separar las responsabilidades en cuatro máquinas virtuales distintas.
