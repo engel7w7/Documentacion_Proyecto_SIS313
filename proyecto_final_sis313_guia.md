@@ -1,28 +1,85 @@
-# Proyecto NeoNube - Guía Completa
+# 🚀 Proyecto Final SIS313: Sentinel-LAN
+
+> **Asignatura:** SIS313: Infraestructura, Plataformas Tecnológicas y Redes  
+> **Semestre:** 2/2025  
+> **Docente:** Ing. Marcelo Quispe Ortega
 
 **Arquitectura de Alta Disponibilidad con Nextcloud**  
 Sistema distribuido en 4 VMs con acceso seguro vía Jump Server
 
-## Tabla de Direcciones IP
+## 👥 Miembros del Equipo (Grupo 1)
 
-| VM   | Hostname | IP Gestión (ens18)   | IP Proyecto (vlan101) | Rol                    |
-|------|----------|----------------------|-----------------------|------------------------|
-| VM 1 | proxy    | 192.168.100.214      | 192.168.101.2         | Entrada Web (Nginx)    |
-| VM 2 | app      | 192.168.100.196      | 192.168.101.4         | Nextcloud + PHP 8.3    |
-| VM 3 | db       | 192.168.100.178      | 192.168.101.5         | MariaDB                |
-| VM 4 | infra    | 192.168.100.209      | 192.168.101.3         | NFS / DNS / Backups    |
+| Nombre Completo | Rol en el Proyecto | Contacto (GitHub/Email) |
+| :--- | :--- | :--- |
+| Romero Morales Jhojan Erick | Arquitecto de Infraestructura y Redes | @engel7w7 |
+| Galván Porcel Joel | Ingeniero de Seguridad y Hardening | - |
+| Mamani Calizaya Jose Mario | Administrador de Base de Datos | - |
+| Campos Alfaro Dilan Domingo | Especialista en Automatización y Backups | - |
+
+---
+
+## 🎯 I. Objetivo del Proyecto
+
+> **Objetivo:** Diseñar e implementar una infraestructura de almacenamiento en la nube de alta disponibilidad utilizando Nextcloud, con arquitectura distribuida en 4 VMs, implementando conceptos de proxy inverso, balanceo de carga, seguridad perimetral, almacenamiento NFS y backups automatizados para garantizar la continuidad operacional y acceso seguro a los datos.
+
+---
+
+## 💡 II. Justificación e Importancia
+
+> **Justificación:** Este proyecto resuelve la problemática de almacenamiento centralizado y disponibilidad de datos en entornos educativos o empresariales. Implementa conceptos de Alta Disponibilidad (T2) mediante la separación de servicios en múltiples VMs, eliminando puntos únicos de fallo. La arquitectura con proxy inverso y acceso vía Jump Server garantiza la Seguridad (T5) del sistema, mientras que la automatización de backups (T6) asegura la continuidad operacional (T1). El uso de almacenamiento NFS permite escalabilidad horizontal y la implementación de túneles SSH proporciona acceso seguro desde redes externas.
+
+---
+
+## 🛠️ III. Tecnologías y Conceptos Implementados
+
+### 3.1. Tecnologías Clave
+
+* **Nginx:** Proxy Inverso con SSL/TLS para acceso seguro, balanceo de carga y limitación de tamaño de archivos (1GB).
+* **Nextcloud 29:** Plataforma de almacenamiento en la nube autohospedada con soporte para sincronización y colaboración.
+* **PHP 8.3-FPM:** Motor de procesamiento backend optimizado para aplicaciones web con configuración de límites de subida.
+* **MariaDB 10.x:** Sistema de gestión de base de datos relacional para almacenamiento de metadatos de Nextcloud.
+* **NFS (Network File System):** Sistema de archivos distribuido para compartir almacenamiento entre servidores.
+* **dnsmasq:** Servidor DNS ligero para resolución interna de nombres de dominio.
+* **OpenSSL:** Generación de certificados SSL/TLS autofirmados con CA personalizada.
+* **UFW (Uncomplicated Firewall):** Firewall de aplicación para control de tráfico entre VMs.
+* **Prometheus & Grafana:** Stack de monitoreo para recolección de métricas y visualización de rendimiento.
+* **Bash Scripts:** Automatización de backups programados con sincronización remota vía SSH.
+
+### 3.2. Conceptos de la Asignatura Puestos en Práctica (T1 - T6)
+
+* ✅ **Alta Disponibilidad (T2) y Tolerancia a Fallos:** Arquitectura distribuida en 4 VMs con separación de servicios (proxy, aplicación, base de datos, infraestructura). El almacenamiento NFS permite migración rápida del servicio en caso de fallo del servidor de aplicación.
+
+* ✅ **Seguridad y Hardening (T5):** Implementación de firewall UFW con reglas restrictivas por VM, uso de certificados SSL/TLS autofirmados, túnel SSH con Jump Server para acceso remoto seguro, puerto no estándar (81) para backend evitando bloqueos, y configuración de trusted proxies en Nextcloud.
+
+* ✅ **Automatización y Gestión (T6):** Scripts automatizados de backup con mysqldump remoto y compresión de datos, programación via cron para ejecución nocturna, y limpieza automática de backups antiguos (retención de 7 días).
+
+* ✅ **Proxy Inverso y Seguridad de Aplicaciones (T3/T4):** Nginx como proxy inverso con redirección HTTP→HTTPS, configuración de headers de seguridad (X-Real-IP, X-Forwarded-For, X-Forwarded-Proto), y limitación de tamaño de carga (client_max_body_size).
+
+* ✅ **Monitoreo (T4/T1):** Integración de Prometheus Node Exporter en todas las VMs para recolección de métricas de sistema, y preparación para visualización con Grafana.
+
+* ✅ **Networking Avanzado (T3):** Implementación de VLANs (vlan101) para segmentación de red del proyecto, configuración de Netplan con red dual (gestión + proyecto), y uso de Jump Server para acceso seguro mediante túneles SSH encadenados.
+
+---
+
+## 🌐 IV. Diseño de la Infraestructura y Topología
+
+### 4.1. Diseño Esquemático
+
+#### Tabla de Direcciones IP
+
+| VM/Host | Hostname | Rol | IP Gestión (ens18) | IP Proyecto (vlan101) | Red Lógica | SO |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **VM 1** | proxy | Proxy Inverso / Frontend HTTPS | 192.168.100.214 | 192.168.101.2 | VLAN 101 | Ubuntu 22.04 |
+| **VM 2** | app | Servidor Nextcloud / Backend HTTP:81 | 192.168.100.196 | 192.168.101.4 | VLAN 101 | Ubuntu 22.04 |
+| **VM 3** | db | Base de Datos MariaDB | 192.168.100.178 | 192.168.101.5 | VLAN 101 | Ubuntu 22.04 |
+| **VM 4** | infra | NFS / DNS / Backups / Monitoreo | 192.168.100.209 | 192.168.101.3 | VLAN 101 | Ubuntu 22.04 |
+| **Jump Server** | - | Salto SSH para acceso externo | 201.131.45.42 | - | Internet | Linux |
+
+#### Diagrama de Arquitectura
 
 
-## Características de la Arquitectura
 
-- 4 VMs + Salto SSH (Jump Server)
-- Puerto 81 interno (evasión de bloqueos) y puerto 443 externo
-- Stack: PHP 8.3, Nginx, MariaDB
-- Incluye correcciones de túneles, permisos NFS, límites de subida (1GB) y configuración de proxy inverso
-
-
-
-## Fase 1: Configuración de Red y Sistema Base
+#### Fase 1: Configuración de Red y Sistema Base
 
 ### 1.1 Configurar Netplan (En las 4 VMs)
 
@@ -92,7 +149,7 @@ sudo apt update && sudo apt install -y mariadb-server prometheus-node-exporter
 sudo apt update && sudo apt install -y nfs-kernel-server dnsmasq prometheus grafana
 ```
 
-## Fase 2: Servicios de Infraestructura (VM infra)
+#### Fase 2: Servicios de Infraestructura (VM infra)
 
 Conéctate a `192.168.100.209`
 
@@ -176,7 +233,7 @@ sudo bash -c 'cat cloud.key cloud.crt ca.crt > /etc/ssl/private/cloud.pem'
 sudo chmod 600 /etc/ssl/private/cloud.pem
 ```
 
-## Fase 3: Base de Datos (VM db)
+#### Fase 3: Base de Datos (VM db)
 
 Conéctate a `192.168.100.178`
 
@@ -230,7 +287,7 @@ FLUSH PRIVILEGES;
 EXIT;
 ```
 
-## Fase 4: Aplicación (VM app)
+#### Fase 4: Aplicación (VM app)
 
 Conéctate a `192.168.100.196`
 
@@ -364,7 +421,7 @@ sudo nginx -t  # Verificar sintaxis
 sudo systemctl restart nginx
 ```
 
-## Fase 5: Proxy Inverso (VM proxy)
+#### Fase 5: Proxy Inverso (VM proxy)
 
 Conéctate a `192.168.100.214`
 
@@ -436,7 +493,7 @@ sudo nginx -t  # Verificar sintaxis
 sudo systemctl restart nginx
 ```
 
-## Fase 6: Configuración de Firewalls (UFW)
+#### Fase 6: Configuración de Firewalls (UFW)
 
 Configurar correctamente el firewall en cada VM para evitar errores de conexión.
 
@@ -483,7 +540,7 @@ sudo ufw allow from 192.168.101.0/29 to any port 53 proto udp # DNS interno
 sudo ufw enable
 ```
 
-## Fase 7: Configuración de Acceso desde el Cliente
+#### Fase 7: Configuración de Acceso desde el Cliente
 
 ### 7.1 Archivo hosts (PC Windows)
 
@@ -565,7 +622,7 @@ Reiniciar PHP-FPM:
 sudo systemctl restart php8.3-fpm
 ```
 
-## Fase 8: Backups Automatizados
+#### Fase 8: Backups Automatizados
 
 Ejecutar en VM infra como usuario `adminsrv`
 
@@ -697,53 +754,107 @@ Verificar que se creó el backup:
 ls -lh /var/backups/nextcloud_full/
 ```
 
-## Diagrama de Arquitectura
-
 ```
-                    Internet
-                       |
-                 [Jump Server]
-               201.131.45.42:22
-                       |
-            ┌──────────┴──────────┐
-            │                     │
-     [Gestión: ens18]      [Proyecto: vlan101]
-      192.168.100.x         192.168.101.x
-            │                     │
-    ┌───────┼─────────────────────┼───────┐
-    │       │                     │       │
-┌───┴───┐ ┌─┴──┐ ┌────┐         ┌─┴──┐ ┌──┴──┐
-│ Proxy │ │App │ │ DB │         │Infr│ │Moni-│
-│ .214  │ │.196│ │.178│         │.209│ │toreo│
-│ :443  │ │:81 │ │:3306         │NFS │ │     │
-└───────┘ └────┘ └────┘         │DNS │ └─────┘
-                                │Back│
-                                │up  │
-                                └────┘
+                         Internet
+                            |
+                      [Jump Server]
+                    201.131.45.42:22
+                            |
+                 ┌──────────┴──────────┐
+                 │                     │
+          [Gestión: ens18]      [Proyecto: vlan101]
+           192.168.100.x          192.168.101.x
+                 │                     │
+         ┌───────┼─────────────────────┼───────┐
+         │       │                     │       │
+    ┌────┴───┐ ┌─┴───┐ ┌─────┐      ┌─┴───┐ ┌─────┐
+    │ Proxy  │ │ App │ │ DB  │      │Infra│ │Prome│
+    │  .214  │ │ .196│ │ .178│      │.209 │ │theus│
+    │  :443  │ │ :81 │ │:3306│      │ NFS │ │Grafa│
+    │  SSL   │ │ PHP │ │Maria│      │ DNS │ │ na  │
+    └────────┘ └─────┘ └─────┘      │Back │ └─────┘
+         │         │        │        │up   │
+         └─────────┴────────┴────────┴─────┘
+                   VLAN 101 (Red Interna)
 ```
-## Referencias
 
-- [Documentación Oficial Nextcloud](https://docs.nextcloud.com/)
-- [Nginx Reverse Proxy Guide](https://docs.nginx.com/nginx/admin-guide/web-server/reverse-proxy/)
-- [MariaDB Documentation](https://mariadb.org/documentation/)
-- [Ubuntu Server Guide](https://ubuntu.com/server/docs)
+### 4.2. Estrategia Adoptada
 
-## Información del Proyecto
+* **Estrategia de Segmentación:** Se implementó una arquitectura de 4 capas (proxy, aplicación, datos, infraestructura) para separar responsabilidades y mejorar la seguridad mediante el principio de defensa en profundidad. El uso de VLAN 101 para comunicación interna y ens18 para gestión permite aislamiento del tráfico.
 
-**Curso**: SIS313 - Infraestructura Plataformas Tecnológicas y Redes
+* **Estrategia de Seguridad:** Se optó por un proxy inverso Nginx en capa frontal para centralizar el cifrado SSL/TLS y ocultar la topología interna. El puerto 81 en backend evita bloqueos institucionales mientras mantiene la seguridad mediante el túnel SSH. El firewall UFW implementa listas blancas específicas por servicio.
 
-**Proyecto**: Sentinel-LAN  
+* **Estrategia de Almacenamiento:** NFS centralizado en VM infra permite escalabilidad horizontal, facilita backups y habilita migración rápida del servicio de aplicación. El montaje automático vía fstab garantiza disponibilidad tras reinicios.
 
-**Versión**: 1.0
+* **Estrategia de Hardening:** Certificados SSL autofirmados con CA propia, configuración de trusted domains y proxies en Nextcloud, límites de subida configurados en múltiples capas (PHP, Nginx), y acceso SSH únicamente desde red de gestión.
 
-**Fecha**: Noviembre 2025
 ---
-**Intregrantes**:
-    
-    - Romero Morales Jhojan Erick CICO
-    
-    - Galván Porcel Joel CICO
-    
-    - Mamani Calizaya Jose Mario CICO
-    
-    - Campos Alfaro Dilan Domingo SIS
+
+## 📋 V. Guía de Implementación y Puesta en Marcha
+
+### 5.1. Pre-requisitos
+
+* 4 VMs con Ubuntu 22.04 LTS y acceso root/sudo
+* Conectividad de red en dos interfaces: ens18 (gestión) y vlan101 (proyecto)
+* Jump Server con acceso SSH configurado (IP: 201.131.45.42)
+* Espacio en disco mínimo: 20GB por VM (50GB recomendado para VM infra)
+* Acceso a repositorios de paquetes Ubuntu (internet o mirror local)
+
+### 5.2. Despliegue (Paso a Paso)
+
+El despliegue se divide en 8 fases secuenciales que deben ejecutarse en orden:
+---
+
+## 📖 VIII. Referencias y Bibliografía
+
+### Documentación Oficial
+* [Documentación Oficial Nextcloud](https://docs.nextcloud.com/) - Guías de instalación y administración
+* [Nginx Reverse Proxy Guide](https://docs.nginx.com/nginx/admin-guide/web-server/reverse-proxy/) - Configuración de proxy inverso
+* [MariaDB Documentation](https://mariadb.org/documentation/) - Administración de base de datos
+* [Ubuntu Server Guide](https://ubuntu.com/server/docs) - Documentación del sistema operativo base
+
+### Recursos Técnicos Utilizados
+* [NFS Server Configuration](https://ubuntu.com/server/docs/service-nfs) - Configuración de almacenamiento compartido
+* [UFW - Uncomplicated Firewall](https://help.ubuntu.com/community/UFW) - Configuración de firewall
+* [OpenSSL Certificate Authority](https://jamielinux.com/docs/openssl-certificate-authority/) - Creación de CA y certificados
+* [SSH Tunneling Guide](https://www.ssh.com/academy/ssh/tunneling) - Túneles SSH y port forwarding
+
+### Material de la Asignatura
+* Presentaciones del curso SIS313 - Temas T1 a T6
+* Laboratorios prácticos de Alta Disponibilidad y Seguridad
+* Banco de Proyectos SIS313 2/2025
+
+---
+
+## 📄 IX. Anexos
+
+### A. Checklist de Verificación
+
+- [x] Todas las VMs tienen conectividad en ambas redes (ens18 y vlan101)
+- [x] NFS montado correctamente en VM app
+- [x] MariaDB acepta conexiones desde 192.168.101.4
+- [x] Certificados SSL copiados a VM proxy
+- [x] UFW configurado en todas las VMs
+- [x] Túnel SSH funcional desde cliente
+- [x] Nextcloud accesible vía `https://nextcloud.rootcode.com.bo:8443`
+- [x] Archivo de 100MB+ sube correctamente (prueba límites)
+- [x] Backup automatizado funciona (verificar en `/var/backups/nextcloud_full`)
+- [x] DNS resuelve internamente (desde VMs: `dig @192.168.101.3 nextcloud.rootcode.com.bo`)
+- [x] Prometheus Node Exporter activo en todas las VMs
+- [x] Documentación completa en repositorio GitHub
+
+### B. Información del Proyecto
+
+**Institución:** Universidad Mayor de San Andrés - Facultad de Ciencias Puras y Naturales  
+**Carrera:** Ciencias de la Computación / Sistemas de Información  
+**Asignatura:** SIS313 - Infraestructura, Plataformas Tecnológicas y Redes  
+**Docente:** Ing. Marcelo Quispe Ortega  
+**Semestre:** 2/2025  
+**Proyecto:** Sentinel-LAN  
+**Versión:** 1.0  
+**Fecha de Entrega:** Noviembre 2025  
+**Repositorio:** [github.com/engel7w7/guia_proyecto_SIS313](https://github.com/engel7w7/guia_proyecto_SIS313)
+
+---
+
+**© 2025 - Proyecto Sentinel-LAN | SIS313 UMSA**
