@@ -575,7 +575,7 @@ Acceder al instalador:
 Abre tu navegador y ve a:
 
 ```
-https://nextcloud.rootcode.com.bo:8443
+https://nextcloud.rootcode.com.bo
 ```
 
 Completar el formulario:
