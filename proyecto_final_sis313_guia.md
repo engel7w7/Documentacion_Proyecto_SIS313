@@ -12,9 +12,9 @@ Sistema distribuido en 4 VMs con acceso seguro vía Jump Server
 | Nombre Completo | Rol en el Proyecto | Contacto (GitHub/Email) |
 | :--- | :--- | :--- |
 | Romero Morales Jhojan Erick | Arquitecto de Infraestructura y Redes | @engel7w7 |
-| Galván Porcel Joel | Ingeniero de Seguridad y Hardening | - |
+| Galván Porcel Joel | Ingeniero de Seguridad y Hardening | @joelporcel |
 | Mamani Calizaya Jose Mario | Administrador de Base de Datos | @JMari01 |
-| Campos Alfaro Dilan Domingo | Especialista en Automatización y Backups | - |
+| Campos Alfaro Dilan Domingo | Especialista en Automatización y Backups | @Schwi-999 |
 
 ---
 
